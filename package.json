@@ -1,0 +1,16 @@
+{
+  "name": "erc20client",
+  "version": "1.0.0",
+  "description": "A front end design for interacting with ERC20 contracts on the Casper Blockchain",
+  "main": "index.js",
+  "scripts": {
+    "run": "node index.js"
+  },
+  "author": "Dylan Ireland",
+  "license": "ISC",
+  "dependencies": {
+    "casper-erc20-js-client": "^0.0.4",
+    "casper-js-sdk": "^2.7.4",
+    "express": "^4.17.2"
+  }
+}
