@@ -9,6 +9,7 @@ const SUPPLY = 1_000_000_000;
 const GAS = 60_000_000_000;
 const WASM_PATH = "./erc20_token.wasm";
 const NODE_ADDRESS = "http://162.55.132.188:7777/rpc";
+const NETWORK_NAME = "casper-test";
 
 const KEYS = Keys.Ed25519.parseKeyFiles(
   "./keys/public_key.pem",
@@ -22,7 +23,7 @@ const REC = Keys.Ed25519.parseKeyFiles(
 
 const erc20 = new ERC20Client(
   NODE_ADDRESS, // RPC address
-  "casper-test", // Network name
+  NETWORK_NAME, // Network name
 );
 
 async function onlyInstall() {
