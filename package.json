@@ -4,7 +4,7 @@
   "description": "A front end design for interacting with ERC20 contracts on the Casper Blockchain",
   "main": "index.js",
   "scripts": {
-    "run": "node index.js"
+    "erc20iface": "node index.js"
   },
   "author": "Dylan Ireland",
   "license": "ISC",

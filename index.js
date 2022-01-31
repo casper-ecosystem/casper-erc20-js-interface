@@ -16,6 +16,11 @@ const KEYS = Keys.Ed25519.parseKeyFiles(
   "./keys/secret_key.pem"
 );
 
+const REC = Keys.Ed25519.parseKeyFiles(
+  "./rec/public_key.pem",
+  "./rec/secret_key.pem"
+);
+
 const erc20 = new ERC20Client(NODE_ADDRESS, NETWORK_NAME);
 
 async function install() {
@@ -35,15 +40,21 @@ async function transfer(amount, destination) { //Handle Secp256K1
   try {
     console.log(typeof KEYS.publicKey);
     const base64pubkey = Buffer.from(destination.substring(2), 'hex').toString('base64');
-    const pubkeyByteArray = Keys.Ed25519.readBase64WithPEM(base64pubkey);
-    console.log(typeof pubkeyByteArray);
-    const newHex = Keys.Ed25519.accountHex(pubkeyByteArray); // not used, only used for testing
+    const pubkeyByteBuffer = Buffer.from(Keys.Ed25519.readBase64WithPEM(base64pubkey));
+    const package = { //This is how REC.publicKey looks, but doesnt work either way
+      data: pubkeyByteBuffer,
+      tag: 1
+    }
+    const newHex = Keys.Ed25519.accountHex(pubkeyByteBuffer); // not used, only used for testing
+    console.log(newHex);
     const contractHash = await tryGetContractHash();
     await erc20.setContractHash(contractHash.slice(5));
-    const transferHash = await erc20.transfer(KEYS, pubkeyByteArray, amount, "60000000000");
+    console.log(REC.publicKey);
+    console.log(pubkeyByteBuffer);
+    const transferHash = await erc20.transfer(KEYS, pubkeyByteBuffer, amount, "60000000000"); //Fails here, can't parse pubkeyByteArray
     await getDeploy(transferHash);
     const symbol = await erc20.symbol();
-    const balance = await erc20.balanceOf(pubkeyByteArray);
+    const balance = await erc20.balanceOf(pubkeyByteBuffer); //Also fails here.
     console.log("Success.");
     console.log("The receiving account's balance is now " + balance + " " + symbol + ".");
     console.log("The sender's balance is now " + erc20.balanceOf(KEYS.publicKey) + " " + symbol + ".");
@@ -67,34 +78,6 @@ async function tryGetContractHash() {
   }
   console.log("Could not get token contract, please try to connect to your contract in a moment.");
   return;
-}
-
-async function test() {
-  console.log("Trying to install");
-  try {
-    let deployHash = await erc20.install(KEYS, "TesToken", "TST", 5, 1000000000000000, 60_000_000_000, "./erc20_token.wasm")
-    console.log(deployHash);
-    let accountInfo = await utils.getAccountInfo(NODE_ADDRESS, KEYS.publicKey);
-    console.log(JSON.stringify(accountInfo, null, 2));
-    const contractHash = await utils.getAccountNamedKeyValue(accountInfo, "erc20_token_contract");
-    console.log(contractHash);
-    await erc20.setContractHash(contractHash.slice(5));
-    const name = await erc20.name();
-    console.log(`... Contract name: ${name}`);
-
-    const transferHash = await erc20.transfer(
-      KEYS,
-      REC.publicKey,
-      "200",
-      "60000000000"
-    );
-    console.log(`... Transfer Hash: ${transferHash}`);
-    await getDeploy(transferHash);
-    const balance = await erc20.balanceOf(REC.publicKey);
-    console.log("Balance " + balance);
-  } catch (error) {
-    console.log(error);
-  }
 }
 
 async function getDeploy(hash) {
