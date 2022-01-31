@@ -6,7 +6,7 @@ const NAME = "TesToken";
 const SYMBOL = "TST";
 const PRECISION = 5;
 const TOTAL_SUPPLY = 1_000_000_000;
-const GAS_LIMIT = 60_000_000_000;
+const GAS_LIMIT = 60_000_000_000; //motes
 const WASM_PATH = "./erc20_token.wasm";
 const NODE_ADDRESS = "http://162.55.132.188:7777/rpc";
 const NETWORK_NAME = "casper-test";
@@ -16,16 +16,12 @@ const KEYS = Keys.Ed25519.parseKeyFiles(
   "./keys/secret_key.pem"
 );
 
-const REC = Keys.Ed25519.parseKeyFiles(
-  "./rec/public_key.pem",
-  "./rec/secret_key.pem"
-);
-
 const erc20 = new ERC20Client(NODE_ADDRESS, NETWORK_NAME);
 
 async function install() {
   try {
     let deployHash = await erc20.install(KEYS, NAME, SYMBOL, PRECISION, TOTAL_SUPPLY, GAS_LIMIT, WASM_PATH);
+    console.log("This could take up to 5 minutes.");
     const contractHash = await tryGetContractHash();
     await erc20.setContractHash(contractHash.slice(5));
     const name = await erc20.name();
@@ -38,26 +34,19 @@ async function install() {
 
 async function transfer(amount, destination) { //Handle Secp256K1
   try {
-    console.log(typeof KEYS.publicKey);
-    const base64pubkey = Buffer.from(destination.substring(2), 'hex').toString('base64');
-    const pubkeyByteBuffer = Buffer.from(Keys.Ed25519.readBase64WithPEM(base64pubkey));
-    const package = { //This is how REC.publicKey looks, but doesnt work either way
-      data: pubkeyByteBuffer,
-      tag: 1
-    }
-    const newHex = Keys.Ed25519.accountHex(pubkeyByteBuffer); // not used, only used for testing
-    console.log(newHex);
+    console.log("This could take up to 5 minutes.")
+    const pubKey = CLPublicKey.fromHex(destination);
     const contractHash = await tryGetContractHash();
     await erc20.setContractHash(contractHash.slice(5));
-    console.log(REC.publicKey);
-    console.log(pubkeyByteBuffer);
-    const transferHash = await erc20.transfer(KEYS, pubkeyByteBuffer, amount, "60000000000"); //Fails here, can't parse pubkeyByteArray
+    const transferHash = await erc20.transfer(KEYS, pubKey, amount, "60000000000"); //Fails here, can't parse pubkeyByteArray
     await getDeploy(transferHash);
     const symbol = await erc20.symbol();
-    const balance = await erc20.balanceOf(pubkeyByteBuffer); //Also fails here.
+    const balance = await erc20.balanceOf(pubKey);
+    const senderBalance = await erc20.balanceOf(KEYS.publicKey);
+    //Do .all() promises, .then() success else fail with error
     console.log("Success.");
     console.log("The receiving account's balance is now " + balance + " " + symbol + ".");
-    console.log("The sender's balance is now " + erc20.balanceOf(KEYS.publicKey) + " " + symbol + ".");
+    console.log("The sender's balance is now " + senderBalance + " " + symbol + ".");
   } catch(error) {
     console.log(error);
   }
@@ -71,12 +60,11 @@ async function tryGetContractHash() {
     if (contractHash != null) {
       return contractHash;
     }
-    console.log("This could take up to 5 minutes.");
-    console.log(i + " tries remaining")
+    process.stdout.write("~");
     await new Promise(resolve => setTimeout(resolve, 1000));
     i--;
   }
-  console.log("Could not get token contract, please try to connect to your contract in a moment.");
+  console.log("Timeout Error. Could not get token contract, please try to connect to your contract in a moment.");
   return;
 }
 
@@ -84,6 +72,7 @@ async function getDeploy(hash) {
   const client = new CasperClient(NODE_ADDRESS);
   let i = 300;
   while (i != 0) {
+    process.stdout.write("~");
     const [deploy, raw] = await client.getDeploy(hash);
     if (raw.execution_results.length !== 0) {
       if (raw.execution_results[0].result.Success) {
@@ -97,13 +86,13 @@ async function getDeploy(hash) {
       continue;
     }
   }
-  throw Error("Timeout after " + i + "s. Something's wrong");
+  throw Error("Timeout after " + i + "s. Deployment could not be found.");
 }
 
 
 
 if (process.argv.length <= 2) {
-  console.log("Please include a command. Run `node erc20 help` for help.");
+  console.log("Please include a command. Run `npm run erc20iface help` for help.");
   console.log(KEYS.accountHex().slice(2));
   return;
 } else if (process.argv[2] == "help") {
