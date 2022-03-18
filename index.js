@@ -11,8 +11,7 @@ const WASM_PATH = "./erc20_token.wasm";
 const NODE_ADDRESS = "http://162.55.132.188:7777/rpc";
 const NETWORK_NAME = "casper-test";
 
-const KEYS = Keys.Ed25519.parseKeyFiles(
-  "./keys/public_key.pem",
+const KEYS = Keys.Ed25519.loadKeyPairFromPrivateFile(
   "./keys/secret_key.pem"
 );
 
